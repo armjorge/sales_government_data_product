@@ -1,0 +1,14 @@
+version: 2
+
+sources:
+  - name: IMSS_BIENESTAR
+    database: ESEOTRES_PHARMA
+    schema: SRC_IMSS_BIENESTAR
+    description: "IMSS Bienestar source tables in ESEOTRES_PHARMA."
+    tables:
+      - name: CAMUNDA_ORDERS
+      - name: INVOICESXMLS
+      - name: INVOICING 
+      - name: PAYMENTS
+      - name: PENALTIES
+      - name: SAGI

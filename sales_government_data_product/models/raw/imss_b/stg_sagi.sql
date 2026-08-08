@@ -1,0 +1,67 @@
+
+WITH BASE_SAGI AS ( 
+    SELECT 
+        *
+        ,TO_TIMESTAMP(
+            REGEXP_REPLACE(
+                REGEXP_SUBSTR(ETL_FILE_NAME, '\\d{2}-\\d{2}-\\d{4}\\s+\\d{2}\\s+\\d{2}'), 
+                '(\\d{2}-\\d{2}-\\d{4}\\s+\\d{2})\\s+(\\d{2})', 
+                '\\1:\\2'
+            ), 
+            'DD-MM-YYYY HH24:MI'
+        ) AS BATCH_DATE
+    FROM {{ source('IMSS_BIENESTAR', 'SAGI') }} 
+    WHERE ESTADO_DE_LA_FACTURA NOT ILIKE 'Cancelado'
+) 
+
+, LATEST_ORDERS AS ( 
+    SELECT 
+        PROVEEDOR
+        ,RFC
+        ,TRIM(NUMERO_DE_CONTRATO) AS NUMERO_DE_CONTRATO
+        ,TRIM(ORDEN_DE_SUMINISTRO) AS ORDEN_DE_SUMINISTRO
+        ,NUMERO_DE_FACTURA
+        , FOLIO_FISCAL
+        , TOTAL
+        , CLUES
+        , ESTADO_DE_LA_FACTURA
+        , OPCIONES
+        , BATCH_DATE
+    FROM BASE_SAGI 
+    WHERE ORDEN_DE_SUMINISTRO IS NOT NULL
+    QUALIFY ROW_NUMBER() OVER (PARTITION BY ORDEN_DE_SUMINISTRO ORDER BY BATCH_DATE) = 1 
+    
+) 
+
+, SAGI_MODEL AS ( 
+
+    SELECT 
+        PROVEEDOR
+        ,RFC
+        ,NUMERO_DE_CONTRATO
+        ,ORDEN_DE_SUMINISTRO
+        ,NUMERO_DE_FACTURA
+        ,FOLIO_FISCAL
+        ,TOTAL
+        ,CLUES
+        ,ESTADO_DE_LA_FACTURA
+        ,OPCIONES
+        ,BATCH_DATE
+        ,CURRENT_TIMESTAMP() AS ETL_LOAD_DATE
+    FROM LATEST_ORDERS
+) 
+
+SELECT
+    PROVEEDOR
+    ,RFC
+    ,NUMERO_DE_CONTRATO
+    ,ORDEN_DE_SUMINISTRO
+    ,NUMERO_DE_FACTURA
+    ,FOLIO_FISCAL
+    ,TOTAL
+    ,CLUES
+    ,ESTADO_DE_LA_FACTURA
+    ,OPCIONES
+    ,BATCH_DATE
+    ,ETL_LOAD_DATE
+FROM SAGI_MODEL

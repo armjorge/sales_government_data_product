@@ -1,0 +1,35 @@
+WITH PENALTIES_BASE AS ( 
+    SELECT
+    TRIM(ORDEN_DE_SUMINISTRO) AS ORDEN_DE_SUMINISTRO
+    ,TRY_CAST(REPLACE(PENA, ',', '') AS NUMBER(38, 2)) AS PENA
+    ,OFICIO
+    ,ETL_FILE_NAME
+    FROM {{ source('IMSS_BIENESTAR', 'PENALTIES') }} 
+
+)
+
+, PENALTIES_LATEST AS (
+    SELECT 
+        ORDEN_DE_SUMINISTRO
+        ,PENA
+        ,OFICIO
+        ,TO_TIMESTAMP(
+            REGEXP_REPLACE(
+                REGEXP_SUBSTR(ETL_FILE_NAME, '\\d{2}-\\d{2}-\\d{4}\\s+\\d{2}\\s+\\d{2}'), 
+                '(\\d{2}-\\d{2}-\\d{4}\\s+\\d{2})\\s+(\\d{2})', 
+                '\\1:\\2'
+            ), 
+            'DD-MM-YYYY HH24:MI'
+        ) AS BATCH_DATE
+        ,CURRENT_TIMESTAMP() AS ETL_LOAD_DATE
+    FROM PENALTIES_BASE
+    QUALIFY ROW_NUMBER() OVER(PARTITION BY ORDEN_DE_SUMINISTRO ORDER BY BATCH_DATE DESC) = 1 
+)
+
+SELECT
+    ORDEN_DE_SUMINISTRO
+    ,PENA
+    ,OFICIO
+    ,BATCH_DATE
+    ,ETL_LOAD_DATE
+FROM PENALTIES_LATEST
