@@ -1,0 +1,11 @@
+snapshots:
+  - name: sagi_snapshot
+    relation: ref('stg_sagi')
+
+    config:
+      database: ESEOTRES_PHARMA
+      schema: WRK_IMSS_BIENESTAR
+      strategy: check
+      unique_key: ORDEN_DE_SUMINISTRO
+      check_cols: ['ESTADO_DE_LA_FACTURA']
+      updated_at: BATCH_DATE
